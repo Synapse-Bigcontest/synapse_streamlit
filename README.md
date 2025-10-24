@@ -10,7 +10,7 @@
 
 MarketSync는 **Streamlit 웹 인터페이스, FastAPI 데이터 서버, LangChain 에이전트**를 결합하여 소상공인을 위한 AI 컨설팅 서비스를 제공합니다. 사용자는 자신의 가게를 선택하여 상세 프로필과 분석 그래프를 확인한 뒤, "10월에 열리는 축제 추천해줘", "추천된 축제들의 마케팅 전략 알려줘" 와 같은 자연어 질문을 통해 맞춤형 컨설팅을 받을 수 있습니다.
 
-**핵심 아키텍처는 Agentic RAG**입니다. AI 에이전트(`Orchestrator`)는 사용자의 질문과 가게의 상세 프로필(JSON)을 바탕으로 상황에 맞는 **도구(Tool)**를 자율적으로 선택하고, 사용자의 질문에 따라 필요하다면 여러 도구를 순차적으로 호출하여 최종 컨설팅 보고서를 생성합니다.
+핵심 아키텍처는 **Agentic RAG**입니다. **AI 에이전트**(`Orchestrator`)는 사용자의 질문과 가게의 상세 프로필(JSON)을 바탕으로 상황에 맞는 **도구**(Tool)를 자율적으로 선택하고, 사용자의 질문에 따라 필요하다면 여러 도구를 순차적으로 호출하여 최종 컨설팅 보고서를 생성합니다.
 
 ---
 
@@ -20,13 +20,23 @@ AI 에이전트가 사용하는 주요 도구와 내부 처리 과정은 다음�
 
 | 기능 분류        | 도구 함수명 (`tools/`)                                   | 주요 처리 과정 (`modules/`)                                                                                                                                                             |
 | :--------------- | :------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **축제 추천** | `recommend_festivals` (festival\_recommender.py)         | **하이브리드 5단계 파이프라인 (`filtering.py`)**: <br> 1. LLM 쿼리 재작성 <br> 2. FAISS 벡터 검색 (유사 축제 후보 선정) <br> 3. LLM 동적 속성 평가 (가게 맞춤성) <br> 4. 하이브리드 점수 계산 <br> 5. 최종 Top3 결과 포맷팅 (2026 예측 포함) |
+| **축제 추천** | `recommend_festivals` (festival\_recommender.py)         | **하이브리드 5단계 파이프라인 (`filtering.py`)**: <br> 1. LLM 쿼리 재작성 <br> 2. FAISS 벡터 검색 (유사 축제 후보 선정) <br> 3. LLM 동적 속성 평가 (가게 맞춤성) <br> 4. 하이브리드 점수 계산 <br> 5. 최종 Top3 결과 포맷팅 |
 | **마케팅 (RAG)** | `search_contextual_marketing_strategy` (marketing\_strategy.py) | **컨텍스트 기반 RAG (`knowledge_base.py`)**: <br> 1. 가게 프로필 + 질문 → LLM 검색 쿼리 생성 <br> 2. FAISS 벡터 검색 (관련 전략 문서 추출) <br> 3. LLM 답변 생성 (추출된 내용을 바탕으로 자연스러운 전략 제안)       |
 | **마케팅 (생성)** | `create_festival_specific_marketing_strategy` (marketing\_strategy.py) | **LLM 기반 전략 생성**: <br> 1. 축제 프로필 조회 (`profile_analyzer.py`) <br> 2. 가게 프로필 + 축제 프로필 + RAG 검색 → LLM 프롬프트 구성 <br> 3. LLM이 특정 축제 맞춤 전략 생성                           |
 | **마케팅 (생성)** | `create_marketing_strategies_for_multiple_festivals` (marketing\_strategy.py) | **LLM 기반 전략 생성 (다수)**: <br> 1. 여러 축제 이름 입력받음 <br> 2. 각 축제별로 `create_festival_specific_marketing_strategy` 반복 호출 <br> 3. 모든 전략을 하나의 보고서로 취합                     |
 | **가게 분석** | `analyze_merchant_profile` (profile\_analyzer.py)      | **LLM 기반 분석**: <br> 가게 프로필(JSON) 입력 → LLM이 SWOT 분석 및 핵심 고객 특성 요약 보고서 생성                                                                                             |
 | **축제 분석** | `analyze_festival_profile` (profile\_analyzer.py)      | **LLM 기반 분석**: <br> 축제 프로필(JSON) 입력 → LLM이 축제의 핵심 특징 및 주요 방문객 특성 요약 보고서 생성                                                                                      |
 | **축제 조회** | `get_festival_profile_by_name` (profile\_analyzer.py)  | **단순 데이터 조회**: 축제 이름 입력 → `festival_df.csv`에서 해당 축제 정보(JSON) 반환 (캐싱 활용)                                                                                           |
+
+---
+
+## 🧠 핵심 아이디어
+
+> "LLM이 스스로 도구를 선택하고 실행하는 **Agentic RAG**"
+
+* **LangChain의 Tool-Calling Agent 구조**: LLM이 사용자의 복잡한 요청을 이해하고, 필요한 기능(도구)을 자율적으로 호출하며 작업을 수행합니다.
+* **컨텍스트 기반 의사결정**: 가게 프로필(JSON) 데이터를 핵심 컨텍스트로 활용하여, 모든 분석과 추천이 현재 분석 중인 가게에 맞춰 이루어집니다.
+* **하이브리드 추천 엔진**: FAISS 벡터 검색(유사도 기반)과 LLM 재평가(가게 맞춤성 기반)를 결합하여 추천의 정확성과 관련성을 극대화합니다.
 
 ---
 
@@ -84,7 +94,16 @@ MarketSync/
 ```mermaid
 graph TD
     %% ========================
-    %% AI 컨설팅 엔진 (최상단)
+    %% 1. 사용자 인터페이스 & 데이터 서버 (상단)
+    %% - ★★★ direction LR 제거 (레이아웃 안정화) ★★★
+    %% ========================
+    subgraph SG_UserServer ["💻 사용자 인터페이스 & 데이터 서버"]
+        A["🖥️ Streamlit UI\n(streamlit_app.py)\n사용자 상호작용"] <--> B["🚀 FastAPI Server\n(api/server.py)\n📊 가게 프로필 / 목록 조회"]
+    end
+
+    %% ========================
+    %% 2. AI 컨설팅 엔진 (하단)
+    %% - direction TB: 내부 요소(C, D, SG_Tools, LLM_Final)를 상하로 배치
     %% ========================
     subgraph SG_Engine ["🧠 AI 컨설팅 엔진"]
         direction TB
@@ -92,6 +111,7 @@ graph TD
         D{"🚦 Tool Routing\nLLM 의도 분석 & 도구 선택"}
 
         subgraph SG_Tools ["🔧 등록된 도구 목록 (tools/)"]
+            %% ★★★ direction TB가 상속되어 도구들이 세로로 정렬됩니다 ★★★
             T1["recommend_festivals\n(축제 추천)"]
             T2["search_contextual_marketing_strategy\n(RAG 마케팅 전략)"]
             T3["create_festival_specific_marketing_strategy\n(단일 축제 전략)"]
@@ -105,25 +125,19 @@ graph TD
     end
 
     %% ========================
-    %% 사용자 인터페이스 & 데이터 서버 (하단)
+    %% 3. 전체 흐름 연결 (TD 레이아웃 기준)
+    %% - Orchestrator(C)가 중앙 허브 역할을 수행
     %% ========================
-    subgraph SG_UserServer ["💻 사용자 인터페이스 & 데이터 서버"]
-        direction LR
-        A["🖥️ Streamlit UI\n(streamlit_app.py)\n사용자 상호작용"] <--> B["🚀 FastAPI Server\n(api/server.py)\n📊 가게 프로필 / 목록 조회"]
-    end
+    A -- "1. 자연어 질문 입력" --> C
+    C -- "2. 의도 분석 요청" --> D
+    D -- "3. 적합 도구 선택/실행" --> SG_Tools
+    SG_Tools -- "4. 도구 실행 결과 반환" --> C
+    C -- "5. 최종 보고서 생성 요청" --> LLM_Final
+    LLM_Final -- "6. 최종 보고서 반환" --> C
+    C -- "7. 최종 결과 전달" --> A
 
     %% ========================
-    %% 연결 관계 (수정)
-    %% ========================
-    A -- "자연어 질문 입력" --> C
-    C -- "의도 분석 요청" --> D
-    D -- "적합 도구 선택/실행" --> SG_Tools
-    SG_Tools -- "도구 실행 결과" --> C
-    C -- "최종 보고서 생성 요청" --> LLM_Final
-    LLM_Final -- "최종 결과 전달" --> A
-
-    %% ========================
-    %% 스타일 지정 (GitHub 호환)
+    %% 4. 스타일 지정
     %% ========================
     style A fill:#4CAF50,color:#fff,stroke:#388E3C,stroke-width:2px
     style B fill:#FF9800,color:#fff,stroke:#EF6C00,stroke-width:2px
@@ -132,6 +146,8 @@ graph TD
     style SG_Tools fill:#E1F5FE, stroke:#0277BD,color:#000
     style T1,T2,T3,T3_multi,T4,T5,T6 fill:#03A9F4,color:#fff,stroke:#0288D1,stroke-width:2px,shape:hexagon
     style LLM_Final fill:#BA68C8,color:#fff,stroke:#8E24AA,stroke-width:2px
+    style SG_UserServer fill:#E8F5E9,stroke:#43A047,stroke-width:2px,color:#000
+    style SG_Engine fill:#FFF3E0,stroke:#FB8C00,stroke-width:2px,color:#000
 ```
 
 ---
@@ -351,7 +367,39 @@ graph TD
 * **Data Handling:** Pandas, NumPy
 * **Visualization:** Matplotlib
 
----
+------------------------------------------------------------------------
+
+## 🌳 데이터 준비 및 벡터 스토어 생성
+
+AI 에이전트와 도구가 작동하기 위해서는 4가지 핵심 데이터 자산이 필요합니다.
+
+### 1. 신한카드 데이터 (`data/final_df.csv`)
+
+* **설명:** AI 에이전트가 분석할 **가맹점(가게)의 프로필 원본 데이터**입니다.
+* **생성:** `create_final_df.py` 스크립트를 통해 원본 신한카드 가맹점 정보 및 거래 데이터를 결합하고, 분석에 용이하도록 '매출 수준', '고객 수준' 등 파생 컬럼을 추가하여 생성합니다.
+* **용도:** FastAPI 서버가 이 파일을 로드하여, `streamlit_app.py`에서 가게를 선택할 때마다 해당 가게의 상세 프로필(`store_profile`)을 AI 에이전트에게 컨텍스트로 제공하는 데 사용됩니다.
+
+### 2. 축제 데이터 (`data/festival_df.csv`)
+
+* **설명:** 전국 89개 핵심 축제의 상세 정보가 담긴 **원본 데이터**입니다.
+* **생성:**
+    1.  '한국관광데이터랩' 및 '대한민국 구석구석'에서 수집한 축제 기본 정보, 통계 데이터를 `festival_df_first.py`, `festival_df_second.py` 등으로 병합하고 정제합니다.
+    2.  `feastival_df_add_keywords.py` 스크립트가 Gemini AI를 호출하여, 각 축제 소개글을 바탕으로 '타겟 고객', '축제 분위기' 등의 맞춤형 키워드를 생성하고 `키워드` 컬럼에 추가합니다.
+* **용도:** '축제 DB'를 생성하는 원천 자료(Source)이자, `get_festival_profile_by_name` 도구가 축제 이름을 기반으로 상세 정보를 조회할 때 직접 참조하는 파일입니다.
+
+### 3. 축제 DB (`vectorstore/faiss_festival`)
+
+* **설명:** `festival_df.csv`의 텍스트 정보(축제명, 키워드, 소개)를 임베딩하여 저장한 **FAISS 벡터 데이터베이스**입니다.
+* **생성:** `create_faiss_festival.py` 스크립트가 `data/festival_df.csv` 파일을 읽어들여, `dragonkue/BGE-m3-ko` 모델로 텍스트를 임베딩한 후 `vectorstore/faiss_festival` 폴더에 FAISS 인덱스로 저장합니다.
+* **용도:** `recommend_festivals` 도구가 사용자의 추천 요청을 벡터 쿼리로 변환하여 유사한 축제를 빠르게 검색(Vector Search)하는 데 사용됩니다.
+
+### 4. 마케팅 DB (`vectorstore/faiss_marketing`)
+
+* **설명:** 소상공인 마케팅 팁, 전략 보고서, 우수 사례 등 다양한 PDF 및 문서들을 임베딩하여 저장한 **RAG용 FAISS 벡터 데이터베이스**입니다.
+* **생성:** `create_faiss_marketing.py` 스크립트가 `marketing/` 폴더 내의 모든 문서를 로드하고, 텍스트를 적절한 청크(Chunk)로 분할한 뒤, `dragonkue/BGE-m3-ko` 모델로 임베딩하여 `vectorstore/faiss_marketing` 폴더에 FAISS 인덱스로 저장합니다.
+* **용도:** `search_contextual_marketing_strategy` (RAG) 도구가 "요즘 뜨는 홍보 방법 알려줘"와 같은 일반 마케팅 질문에 대해 가장 관련성 높은 지식을 검색하여 답변을 생성하는 데 사용됩니다.
+      
+------------------------------------------------------------------------
 
 ## 🚀 실행 방법
 
@@ -381,6 +429,7 @@ uv pip install -r requirements.txt
 
 # 5. FastAPI 서버 실행 (api 폴더의 server.py를 모듈로 실행)
 python -m api.server
+```
 
 ### 3️⃣ Streamlit 앱 실행
 
@@ -411,19 +460,10 @@ uv run streamlit run streamlit_app.py
 
 | 사용자 입력                         | 주요 실행 도구                                            | 예상 결과                               |
 | :---------------------------------- | :------------------------------------------------------ | :-------------------------------------- |
-| "우리 가게 분석해줘"                | `analyze_merchant_profile`                              | 가게 SWOT 분석 및 핵심 고객 리포트      |
+| "현재 우리 가게를 더 자세히 분석해줘" | `analyze_merchant_profile`                              | 가게 SWOT 분석 및 핵심 고객 리포트      |
 | "주말 방문객 늘릴 만한 축제 추천해줘" | `recommend_festivals`                                   | Top 3 맞춤 축제 추천 리스트             |
-| "`서울디저트페어` 마케팅 전략 알려줘" | `create_festival_specific_marketing_strategy`           | 해당 축제 맞춤형 마케팅 전략 제안       |
-| "추천된 축제들 마케팅 방법 알려줘"    | `create_marketing_strategies_for_multiple_festivals`    | 여러 축제에 대한 통합 마케팅 전략 제안  |
-| "요즘 뜨는 홍보 방법 알려줘"        | `search_contextual_marketing_strategy` (RAG)            | 가게 특성 기반 최신 마케팅 트렌드/팁 |
+| - "`서울디저트페어`를 위한 홍보 전략 알려줘" - "`금산인삼축제`에서 어떤 프로모션을 하면 효과적일까?" | `create_festival_specific_marketing_strategy`           | 해당 축제 맞춤형 마케팅 전략 제안       |
+| - "추천된 축제들에 대한 마케팅 방법 알려줘" - "방금 추천해준 축제들에서 어떤 홍보 방법을 써야 할까?"  | `create_marketing_strategies_for_multiple_festivals`    | 여러 축제에 대한 통합 마케팅 전략 제안  |
+| - "요즘 뜨는 홍보 방법 알려줘" - "20대 고객을 늘리고 싶어" | `search_contextual_marketing_strategy` (RAG)            | 가게 특성 기반 최신 마케팅 트렌드/팁 |
 
 ---
-
-## 🧠 핵심 아이디어
-
-> "LLM이 스스로 도구를 선택하고 실행하는 **Agentic RAG**"
-
-* **LangChain의 Tool-Calling Agent 구조**: LLM이 사용자의 복잡한 요청을 이해하고, 필요한 기능(도구)을 자율적으로 호출하며 작업을 수행합니다.
-* **컨텍스트 기반 의사결정**: 가게 프로필(JSON) 데이터를 핵심 컨텍스트로 활용하여, 모든 분석과 추천이 현재 분석 중인 가게에 맞춰 이루어집니다.
-* **하이브리드 추천 엔진**: FAISS 벡터 검색(유사도 기반)과 LLM 재평가(가게 맞춤성 기반)를 결합하여 추천의 정확성과 관련성을 극대화합니다.
-"# MarketSync" 
