@@ -49,22 +49,24 @@ AI 에이전트가 사용하는 주요 도구와 내부 처리 과정은 다음�
 
 ---
 
-
-## 🌐 실행 결과 (서비스 웹 페이지)
+## 🌐 서비스 데모 URL
 
 **[https://huggingface.co/spaces/hyeonjoo/MarketSync](https://huggingface.co/spaces/hyeonjoo/MarketSync)**
 
-위 웹 페이지는 **Hugging Face Spaces**를 이용해 배포되었습니다.
+이 앱은 **Hugging Face Spaces** (무료 등급, 16GB RAM)를 이용해 배포되었습니다.
 
-Hugging Face Spaces는 무료 등급에서 16GB의 넉넉한 RAM을 제공하여, 본 프로젝트의 대용량 AI 임베딩 모델(`BGE-m3-ko`)을 실행하는 데 적합합니다. 
-(대회에서 권장된 Streamlit Cloud는 무료 등급의 1GB RAM 제한으로 인해 메모리 부족 오류가 발생하여 Hugging Face Spaces로 최종 배포되었습니다.)
+본 프로젝트의 대용량 AI 임베딩 모델(`BGE-m3-ko`)을 실행하기 위해 넉넉한 RAM이 필요했습니다. (대회에서 권장된 Streamlit Cloud는 1GB RAM 제한으로 메모리 오류가 발생하여 Hugging Face로 최종 배포했습니다.)
 
 *참고: 최초 접속 시 또는 비활성화 상태에서 재접속 시, Space가 빌드되거나 모델을 로드하는 데 1~2분 정도 소요될 수 있습니다.*
 
 
----
+### 💡 GitHub 코드와 배포 버전의 차이
 
-------------------------------------------------------------------------
+Hugging Face 배포 버전은 배포 편의성을 위해, GitHub 원본 코드의 FastAPI (`api/server.py`) 데이터 처리 로직을 `streamlit_app.py`에 **직접 통합**한 '일체형' 구조입니다.
+
+(원본의 FastAPI 서버는 UI와 데이터 처리를 분리하여 메모리 효율성을 높이기 위한 설계였습니다.)
+
+---
 
 ## 🚀 로컬 개발 환경 구성 방법
 
