@@ -37,7 +37,7 @@ Hugging Face 배포 버전은 배포 편의성을 위해, GitHub 원본 코드�
 
 **[ (여기를 클릭) Synape_상세설명서.pdf 다운로드/보기 ](Synape_상세설명서.pdf)**
 
-[![Synape 상세 설명서 미리보기](assets/Synape_상세설명서_preview.png)](Synape_상세설명서.pdf)
+[![Synape 상세 설명서 미리보기](Synape_상세설명서.png)](Synape_상세설명서.pdf)
 
 ------------------------------------------------------------------------
 
